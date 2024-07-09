@@ -25,7 +25,6 @@ imageList = [
 # Do not change these unless you change the setup scripts too.
 nfsServerName = "nfs"
 nfsLanName    = "nfsLan"
-nfsDirectory  = "/nfs"
 
 # NFS Server Type (Source Server)
 pc.defineParameter("serverType", "Source Server Type",
@@ -39,10 +38,6 @@ pc.defineParameter("osImage", "Select OS image for servers",
                    portal.ParameterType.IMAGE,
                    imageList[0], imageList)
 
-pc.defineParameter("nfsSize", "Size of NFS Storage",
-                   portal.ParameterType.STRING, "200GB",
-                   longDescription="Size of disk partition to allocate on NFS server")
-
 # Always need this when using parameters
 params = pc.bindParameters()
 
@@ -51,15 +46,10 @@ nfsServer = request.RawPC("snode")
 nfsServer.disk_image = params.osImage
 nfsServer.hardware_type = params.serverType
 nfsServer.routable_control_ip = True
-# Attach server to lan.
-iface0 = nfsServer.addInterface('interface-0', pg.IPv4Address('192.168.6.2','255.255.255.0'))
-# Storage file system goes into a local (ephemeral) blockstore.
-nfsBS = nfsServer.Blockstore("nfsBS", nfsDirectory)
-nfsBS.size = params.nfsSize
 
 clientTypes = params.clientTypes.split(',')
 
-ip_count = 3
+ip_count = 2
 ifaces = []
 
 for c_type in clientTypes:
@@ -67,21 +57,7 @@ for c_type in clientTypes:
     nfsClient.disk_image = params.osImage
     nfsClient.hardware_type = c_type
     nfsClient.routable_control_ip = True
-    c_iface = nfsClient.addInterface('interface-'+str(ip_count), pg.IPv4Address('192.168.6.'+str(ip_count),'255.255.255.0'))
-    ifaces.append(c_iface)
     ip_count = ip_count + 1
-
-
-# The NFS network. All these options are required.
-nfsLan = request.LAN(nfsLanName)
-# Must provide a bandwidth. BW is in Kbps
-nfsLan.bandwidth         = 100000
-nfsLan.best_effort       = True
-nfsLan.vlan_tagging      = True
-nfsLan.link_multiplexing = True
-nfsLan.addInterface(iface0)
-for iface in ifaces:
-    nfsLan.addInterface(iface)
 
 # Print the RSpec to the enclosing page.
 pc.printRequestRSpec(request)
